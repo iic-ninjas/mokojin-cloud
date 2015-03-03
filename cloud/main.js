@@ -117,8 +117,8 @@ Parse.Cloud.define("createPerson", function(request, response) {
 // Returns player
 Parse.Cloud.define("joinQueue", function(request, response) {
   var personId = request.params.person;
-  if (!personId)
-    response.error("person (id) is required")
+  if (!personId) {
+    response.error("person (id) is required");
     return;
   }
   Person.find(personId).then(
@@ -128,7 +128,11 @@ Parse.Cloud.define("joinQueue", function(request, response) {
       } else {
         person.joinQueue().done(
           function(player){
-            response.success(player);
+            if (player){
+              response.success(player);
+            } else {
+              response.error('No player :(');
+            }
           }
         ).fail(
           function(err){
