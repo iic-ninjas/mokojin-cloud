@@ -37,7 +37,7 @@ var Match = Parse.Object.extend("Match", {
     } else {
       return null;
     }
-  }
+  },
   loser: function(){
     var winner = this.get('winner');
     if (winner == 'playerA'){
@@ -68,7 +68,7 @@ var Match = Parse.Object.extend("Match", {
   },
   validWinnerValue: function(winner){
     return MatchEnums.indexOf(winner) > -1
-  }
+  },
   currentMatch: function(){
     var query = new Parse.Query(Match);
     query.doesNotExist('endedAt');
