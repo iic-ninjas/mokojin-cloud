@@ -1,6 +1,19 @@
+var Character = Parse.Object.extend("Character", {
+
+}, {
+  find: function(id){
+    var q = new Parse.Query(Character);
+    return q.get(id);
+  },
+});
+
 var Player = Parse.Object.extend("Player", {
 
 }, {
+  find: function(id){
+    var q = new Parse.Query(Player);
+    return q.get(id);
+  },
 });
 
 
@@ -140,6 +153,48 @@ Parse.Cloud.define("joinQueue", function(request, response) {
           }
         )
       }
+    }
+  )
+});
+
+// Expects to receive params.player     [id]
+//                    params.characterA [id]
+//                    params.characterB [id]
+// Returns player
+Parse.Cloud.define("setCharacter", function(request, response) {
+  var playerId = request.params.player;
+  if (!player) {
+    response.error("player (id) is required");
+    return;
+  }
+  var characterA = request.params.characterA;
+  var characterB = request.params.characterB;
+  if (!characterA) {
+    response.error("characterA (id) is required");
+    return;
+  }
+
+  Parse.Promise.when([
+    Player.find(playerId),
+    Character.find(characterA),
+    Character.find(characterB),
+  ]).then(
+    function(player, charA, charB){
+      if (!player || !charA){
+        response.error("No player or character found");
+      } else {
+        player.set("characterA", charA);
+        player.set("characterB", charB);
+        player.save().done(
+          function(player){
+            response.success(player);
+          }
+        ).fail(
+          function(err){
+            response.error(err);
+          }
+        )
+      };
     }
   )
 });
