@@ -6,6 +6,11 @@ var Character = Parse.Object.extend("Character", {
     var q = new Parse.Query(Character);
     return q.get(id);
   },
+  safeFind: function(id){
+    return this.find(id).fail(function(err){
+      return Parse.Promise.as(null);
+    });
+  }
 });
 
 var Player = Parse.Object.extend("Player", {
@@ -265,24 +270,20 @@ Parse.Cloud.define("setCharacter", function(request, response) {
   Parse.Promise.when([
     Player.find(playerId),
     Character.find(characterA),
-    Character.find(characterB),
+    Character.safeFind(characterB),
   ]).then(
     function(player, charA, charB){
-      if (!player || !charA){
-        response.error("No player or character found");
-      } else {
-        player.set("characterA", charA);
-        player.set("characterB", charB);
-        player.save().done(
-          function(player){
-            response.success(player);
-          }
-        ).fail(
-          function(err){
-            response.error(err);
-          }
-        )
-      };
+      player.set("characterA", charA);
+      player.set("characterB", charB);
+      return player.save();
+    }
+  ).done(
+    function(player){
+      response.success(player);
+    }
+  ).fail(
+    function(err){
+      response.error(err);
     }
   )
 });
