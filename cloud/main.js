@@ -227,7 +227,6 @@ Parse.Cloud.define("joinQueue", function(request, response) {
               Match.currentMatch().then(
                 function(match){
                   if (match) {
-                    response.success(player);
                     return null;
                   } else {
                     return Match.startMatch()
