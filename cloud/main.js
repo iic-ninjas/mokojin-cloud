@@ -123,7 +123,7 @@ var Queue = Parse.Object.extend("QueueItem", {
   }
 }, {
   find: function(id){
-    var q = new Parse.Query(Match);
+    var q = new Parse.Query(Queue);
     return q.get(id);
   },
   findPlayerInQueue: function(person){
@@ -266,7 +266,7 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
   Queue.find(queueItemId).then(
     function(queueItem){
       if (!queueItem){
-        response.error("No queue item matching that id")
+        response.error("No queue item matching that id");
       } else {
         queueItem.dequeue().done(
           function(player){
@@ -276,10 +276,10 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
           function(err){
             response.error(err);
           }
-        )
+        );
       }
     }
-  )
+  );
 });
 
 // Expects to receive params.player     [id]
