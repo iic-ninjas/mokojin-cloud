@@ -270,9 +270,7 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
       } else {
         queueItem.dequeue().done(
           function(player){
-            if (player){
-              response.success();
-            }
+            response.success();
           }
         ).fail(
           function(err){
