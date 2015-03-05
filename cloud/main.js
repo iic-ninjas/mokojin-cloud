@@ -122,6 +122,10 @@ var Queue = Parse.Object.extend("QueueItem", {
     })
   }
 }, {
+  find: function(id){
+    var q = new Parse.Query(Match);
+    return q.get(id);
+  },
   findPlayerInQueue: function(person){
     var innerQuery = new Parse.Query(Player);
     innerQuery.equalTo("person", person);
