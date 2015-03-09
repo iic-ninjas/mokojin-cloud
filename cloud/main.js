@@ -237,7 +237,11 @@ Parse.Cloud.define("joinQueue", function(request, response) {
                   }
                 }
               ).then( function(){
-                response.success(player);
+                sendDataChangedNotification().then(function() {
+                  response.success(player);
+                }).fail(function(err) {
+                  response.error(err);
+                });
               });
             } else {
               response.error('No player :(');
@@ -269,7 +273,9 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
       } else {
         queueItem.dequeue().done(
           function(player){
-            response.success();
+            return sendDataChangedNotification().done(function() {
+              response.success();
+            });
           }
         ).fail(
           function(err){
@@ -308,7 +314,11 @@ Parse.Cloud.define("setCharacter", function(request, response) {
       player.set("characterB", charB);
       return player.save();
     }
-  ).done(
+  ).then(function(player) {
+    return sendDataChangedNotification().done(function() {
+      return player;
+    });
+  }).done(
     function(player){
       response.success(player);
     }
@@ -353,7 +363,11 @@ Parse.Cloud.define("endMatch", function(request, response) {
         Match.startMatch(winner).then(
           function(newMatch){
             if (newMatch){
-              response.success(newMatch);
+              sendDataChangedNotification().done(function() {
+                response.success(newMatch);
+              }).fail(function(err) {
+                response.error(err);
+              });
             } else {
               response.error();
             }
@@ -363,3 +377,14 @@ Parse.Cloud.define("endMatch", function(request, response) {
     }
   )
 });
+
+
+function sendDataChangedNotification() {
+  var everyoneQuery = new Parse.Query(Parse.Installation);
+  return Parse.Push.send({
+    where: everyoneQuery,
+    data: {
+      type: "dataChanged"
+    }
+  });
+}
