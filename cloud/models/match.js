@@ -1,3 +1,4 @@
+var Queue = require('cloud/models/queue.js');
 var Elo = require('cloud/elo.js');
 
 MatchEnums = ['playerA', 'playerB'];

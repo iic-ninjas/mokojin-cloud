@@ -29,7 +29,14 @@ var Queue = Parse.Object.extend("QueueItem", {
     innerQuery.equalTo("person", person);
     var query = new Parse.Query(Queue);
     query.matchesQuery('player', innerQuery);
-    return query.first();
+    query.include('player');
+    return query.first().then(function(queueItem){
+      if (queueItem){
+        return queueItem.get('player');
+      } else {
+        return null;
+      }
+    });
   },
   enqueuePerson: function(person){
     var player = new Player()

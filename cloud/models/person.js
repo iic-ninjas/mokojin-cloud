@@ -35,6 +35,8 @@ var Person = Parse.Object.extend("Person", {
           u = new Person();
           u.set('name', name);
           return u.save();
+        } else {
+          return user;
         }
       }
     );
