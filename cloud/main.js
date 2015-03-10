@@ -1,7 +1,26 @@
 _ = require('underscore');
+var SessionData = {
+  get: function(){
+    return Parse.Promise.when([
+      Match.currentMatch(),
+      Queue.getQueue()
+    ]).then(function(currentMatch, queue){
+        return Parse.Promise.as({
+          match: currentMatch,
+          queue: queue
+        });
+    });
+  }
+}
+
+
 var Character = Parse.Object.extend("Character", {
 
 }, {
+  all: function(){
+    var q = new Parse.Query(Character);
+    return q.find()
+  },
   find: function(id){
     var q = new Parse.Query(Character);
     return q.get(id);
@@ -122,6 +141,18 @@ var Queue = Parse.Object.extend("QueueItem", {
     })
   }
 }, {
+  getQueue: function(){
+    return this._queueQuery().find();
+  },
+  _queueQuery: function(){
+    var query = new Parse.Query(Queue);
+    query.include('player');
+    query.include('player.person');
+    query.include('player.characterA');
+    query.include('player.characterB');
+    query.ascending("createdAt");
+    return query
+  },
   find: function(id){
     var q = new Parse.Query(Queue);
     return q.get(id);
@@ -145,12 +176,7 @@ var Queue = Parse.Object.extend("QueueItem", {
   },
   peek: function(skip){
     if (!skip) skip = 0
-    var query = new Parse.Query(Queue);
-    query.include('player');
-    query.include('player.person');
-    query.include('player.characterA');
-    query.include('player.characterB');
-    query.ascending("createdAt");
+    var query = this._queueQuery();
     query.skip(skip);
     return query.first();
   }
@@ -173,6 +199,11 @@ var Person = Parse.Object.extend("Person", {
   }
 }, {
   // Class methods
+  all: function(){
+    var query = new Parse.Query(Person);
+    query.ascending("name");
+    return query.find()
+  },
   find: function(id){
     var q = new Parse.Query(Person);
     return q.get(id);
@@ -180,17 +211,46 @@ var Person = Parse.Object.extend("Person", {
   findOrCreate: function(name) {
     var q = new Parse.Query(Person);
     q.equalTo("name", name);
-    var promise = q.first().then(
+    return q.first().then(
       function(user){
         if (!user){
           u = new Person();
           u.set('name', name);
-          return u.save()
+          return u.save();
         }
       }
-    )
-    return promise;
+    );
   }
+});
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////                    CLOUD FUNCTIONS                     ////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Returns sessionData
+Parse.Cloud.define("getSessionData", function(request, response){
+  SessionData.get().then(function(sessionData){
+    response.success(sessionData);
+  });
+});
+
+// Returns a list of characters
+Parse.Cloud.define("getCharacters", function(request, response){
+  Character.all().then(function(characters){
+    response.success(characters);
+  });
+});
+
+// Returns a list of all the people
+Parse.Cloud.define("getPeople", function(request, response){
+  Person.all().then(function(people){
+    response.success(people);
+  });
 });
 
 // Expects to receive params.name
