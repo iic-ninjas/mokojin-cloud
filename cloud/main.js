@@ -196,7 +196,11 @@ Parse.Cloud.define("endMatch", function(request, response) {
       if (!match) return null;
       var winner = match.winner();
       var loser = match.loser();
-      loser.get('person').joinQueue().then(function(){
+      loser.get('person').joinQueue().then(function(newPlayer){
+        newPlayer.set("characterA", loser.get('characterA'));
+        newPlayer.set("characterB", loser.get('characterB'));
+        return newPlayer.save();
+      }).then(function(){
         Match.startMatch(winner).then(
           function(newMatch){
             if (newMatch){
