@@ -20,10 +20,10 @@ var Elo = {
     var rankA = personA.get('rank');
     var personB = match.get('playerB').get('person');
     var rankB = personB.get('rank');
-    var playerAdidWin = match.get('winner') == 'playerA';
+    var playerADidWin = match.get('winner') == 'playerA';
 
-    var adjustedRankA = Elo.adjusted(rankA, rankB, playerAdidWin);
-    var adjustedRankB = Elo.adjusted(rankB, rankA, !playerAdidWin);
+    var adjustedRankA = Elo.adjusted(rankA, rankB, playerADidWin);
+    var adjustedRankB = Elo.adjusted(rankB, rankA, !playerADidWin);
 
     return Parse.Promise.when([
         personA.save({rank: adjustedRankA}),
