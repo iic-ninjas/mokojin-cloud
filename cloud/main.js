@@ -1,4 +1,6 @@
 _ = require('underscore');
+notifications = require('cloud/notifications.js');
+
 var Character = Parse.Object.extend("Character", {
 
 }, {
@@ -237,10 +239,10 @@ Parse.Cloud.define("joinQueue", function(request, response) {
                   }
                 }
               ).then( function(){
-                sendDataChangedNotification().then(function() {
+                notifications.sendDataChangedNotification().then(function() {
                   response.success(player);
                 }).fail(function(err) {
-                  response.error(err);
+                  response.success(err);
                 });
               });
             } else {
@@ -273,7 +275,7 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
       } else {
         queueItem.dequeue().done(
           function(player){
-            return sendDataChangedNotification().done(function() {
+            return notifications.sendDataChangedNotification().done(function() {
               response.success();
             });
           }
@@ -315,7 +317,7 @@ Parse.Cloud.define("setCharacter", function(request, response) {
       return player.save();
     }
   ).then(function(player) {
-    return sendDataChangedNotification().done(function() {
+    return notifications.sendDataChangedNotification().done(function() {
       return player;
     });
   }).done(
@@ -363,10 +365,10 @@ Parse.Cloud.define("endMatch", function(request, response) {
         Match.startMatch(winner).then(
           function(newMatch){
             if (newMatch){
-              sendDataChangedNotification().done(function() {
+              notifications.sendDataChangedNotification().done(function() {
                 response.success(newMatch);
               }).fail(function(err) {
-                response.error(err);
+                response.success(err);
               });
             } else {
               response.error();
@@ -379,12 +381,3 @@ Parse.Cloud.define("endMatch", function(request, response) {
 });
 
 
-function sendDataChangedNotification() {
-  var everyoneQuery = new Parse.Query(Parse.Installation);
-  return Parse.Push.send({
-    where: everyoneQuery,
-    data: {
-      type: "dataChanged"
-    }
-  });
-}
