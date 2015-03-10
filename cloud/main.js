@@ -1,19 +1,18 @@
 _ = require('underscore');
-var SessionData = Parse.Object.extend("SessionData",{
-
-},{
+var SessionData = {
   get: function(){
     return Parse.Promise.when([
       Match.currentMatch(),
       Queue.getQueue()
     ]).then(function(currentMatch, queue){
-        var sessionData = new SessionData();
-        sessionData.set('match', currentMatch);
-        sessionData.set('queue', queue);
-        return Parse.Promise.as(sessionData);
+        return Parse.Promise.as({
+          match: currentMatch,
+          queue: queue
+        });
     });
   }
-})
+}
+
 
 var Character = Parse.Object.extend("Character", {
 
