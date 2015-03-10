@@ -1,7 +1,60 @@
 _ = require('underscore');
-var Character = Parse.Object.extend("Character", {
 
+var Elo = {
+  startRank: 1200,
+  K: 20,
+  expected: function(rankA, rankB){
+    return 1/(1 + Math.pow(10, (rankB-rankA)/400));
+  },
+  adjusted: function(rankA, rankB, didWin){
+    var sValue = didWin ? 1 : 0;
+    return rankA + Elo.K * (sValue - Elo.expected(rankA, rankB));
+  },
+  expectedMatch: function(match){
+    return Elo.expected(match.get('playerA').get('person').get('rank'),
+                        match.get('playerB').get('person').get('rank'));
+  },
+  adjustMatchResults: function(match){
+    if (!match) return null;
+    var personA = match.get('playerA').get('person');
+    var rankA = personA.get('rank');
+    var personB = match.get('playerB').get('person');
+    var rankB = personB.get('rank');
+    var playerADidWin = match.get('winner') == 'playerA';
+
+    var adjustedRankA = Elo.adjusted(rankA, rankB, playerADidWin);
+    var adjustedRankB = Elo.adjusted(rankB, rankA, !playerADidWin);
+
+    return Parse.Promise.when([
+        personA.save({rank: adjustedRankA}),
+        personB.save({rank: adjustedRankB}),
+    ]).then(function(){
+      return match;
+    });
+  },
+}
+
+var SessionData = {
+  get: function(){
+    return Parse.Promise.when([
+      Match.currentMatch(),
+      Queue.getQueue()
+    ]).then(function(currentMatch, queue){
+        return Parse.Promise.as({
+          match: currentMatch,
+          queue: queue
+        });
+    });
+  }
+}
+
+
+var Character = Parse.Object.extend("Character", {
 }, {
+  all: function(){
+    var q = new Parse.Query(Character);
+    return q.find()
+  },
   find: function(id){
     var q = new Parse.Query(Character);
     return q.get(id);
@@ -14,7 +67,6 @@ var Character = Parse.Object.extend("Character", {
 });
 
 var Player = Parse.Object.extend("Player", {
-
 }, {
   find: function(id){
     var q = new Parse.Query(Player);
@@ -23,15 +75,18 @@ var Player = Parse.Object.extend("Player", {
 });
 
 
-MatchEnums = ['playerA', 'playerB', 'tie'];
+MatchEnums = ['playerA', 'playerB'];
 var Match = Parse.Object.extend("Match", {
   isCurrent: function(){
     return this.get('endedAt') == null;
   },
   endMatch: function(winner){
-    this.set('winner', winner);
-    this.set('endedAt', Date.now());
-    return this.save();
+    return this.save({
+      winner: winner,
+      endedAt: new Date()
+    }).then(function(match){
+      return Elo.adjustMatchResults(match);
+    });
   },
   winner: function(){
     var winner = this.get('winner');
@@ -85,13 +140,23 @@ var Match = Parse.Object.extend("Match", {
     query.include('playerB.person');
     query.include('playerB.characterA');
     query.include('playerB.characterB');
-    return query.first();
+    return query.first().then(function(match){
+      if (!match) return null;
+      match.attributes.expected = Elo.expectedMatch(match);
+      return match;
+    });
   },
   find: function(id){
-    var q = new Parse.Query(Match);
-    q.include('playerA');
-    q.include('playerB');
-    return q.get(id);
+    var query = new Parse.Query(Match);
+    query.include('playerA');
+    query.include('playerB');
+    query.include('playerA.person');
+    query.include('playerA.characterA');
+    query.include('playerA.characterB');
+    query.include('playerB.person');
+    query.include('playerB.characterA');
+    query.include('playerB.characterB');
+    return query.get(id);
   },
   findPlayerInCurrentMatch: function(person){
     var promise = new Parse.Promise();
@@ -122,6 +187,18 @@ var Queue = Parse.Object.extend("QueueItem", {
     })
   }
 }, {
+  getQueue: function(){
+    return this._queueQuery().find();
+  },
+  _queueQuery: function(){
+    var query = new Parse.Query(Queue);
+    query.include('player');
+    query.include('player.person');
+    query.include('player.characterA');
+    query.include('player.characterB');
+    query.ascending("createdAt");
+    return query
+  },
   find: function(id){
     var q = new Parse.Query(Queue);
     return q.get(id);
@@ -145,12 +222,7 @@ var Queue = Parse.Object.extend("QueueItem", {
   },
   peek: function(skip){
     if (!skip) skip = 0
-    var query = new Parse.Query(Queue);
-    query.include('player');
-    query.include('player.person');
-    query.include('player.characterA');
-    query.include('player.characterB');
-    query.ascending("createdAt");
+    var query = this._queueQuery();
     query.skip(skip);
     return query.first();
   }
@@ -173,6 +245,11 @@ var Person = Parse.Object.extend("Person", {
   }
 }, {
   // Class methods
+  all: function(){
+    var query = new Parse.Query(Person);
+    query.ascending("name");
+    return query.find()
+  },
   find: function(id){
     var q = new Parse.Query(Person);
     return q.get(id);
@@ -180,17 +257,46 @@ var Person = Parse.Object.extend("Person", {
   findOrCreate: function(name) {
     var q = new Parse.Query(Person);
     q.equalTo("name", name);
-    var promise = q.first().then(
+    return q.first().then(
       function(user){
         if (!user){
           u = new Person();
           u.set('name', name);
-          return u.save()
+          return u.save();
         }
       }
-    )
-    return promise;
+    );
   }
+});
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////                    CLOUD FUNCTIONS                     ////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Returns sessionData
+Parse.Cloud.define("getSessionData", function(request, response){
+  SessionData.get().then(function(sessionData){
+    response.success(sessionData);
+  });
+});
+
+// Returns a list of characters
+Parse.Cloud.define("getCharacters", function(request, response){
+  Character.all().then(function(characters){
+    response.success(characters);
+  });
+});
+
+// Returns a list of all the people
+Parse.Cloud.define("getPeople", function(request, response){
+  Person.all().then(function(people){
+    response.success(people);
+  });
 });
 
 // Expects to receive params.name
@@ -329,9 +435,8 @@ Parse.Cloud.define("endMatch", function(request, response) {
     response.error("match (id) is required");
     return;
   }
-
   var winner = request.params.winner;
-  if (!winner || Match.validWinnerValue(winner)) {
+  if (!winner || !Match.validWinnerValue(winner)) {
     response.error("valid winner value required");
     return;
   }
@@ -340,13 +445,16 @@ Parse.Cloud.define("endMatch", function(request, response) {
     function(match){
       if (!match){
         response.error("No match found");
+        return null;
       } else if (!match.isCurrent()){
         response.error("Can't change match after it's done");
+        return null;
       }
       return match.endMatch(winner);
     }
   ).then(
     function(match){
+      if (!match) return null;
       var winner = match.winner();
       var loser = match.loser();
       loser.get('person').joinQueue().then(function(){
@@ -362,4 +470,22 @@ Parse.Cloud.define("endMatch", function(request, response) {
       })
     }
   )
+});
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////                         HOOKS                          ////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+Parse.Cloud.beforeSave("Person", function(request, response) {
+  var person = request.object;
+  if (person.existed()) {
+    response.success();
+  } else {
+    person.set('rank', Elo.startRank);
+    response.success();
+  }
 });
