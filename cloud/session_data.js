@@ -1,3 +1,4 @@
+_ = require('underscore');
 var Match = require('cloud/models/match.js');
 var Queue = require('cloud/models/queue.js');
 
@@ -11,6 +12,22 @@ var SessionData = {
           match: currentMatch,
           queue: queue
         });
+    });
+  },
+  goodnight: function(){
+    return SessionData.get().then(function(sessionData){
+      var promises = [];
+      if (sessionData.match){
+        promises.push(sessionData.match.forfeit());
+      }
+      if (sessionData.queue){
+        promises.push(
+          _.map(sessionData.queue, function(queueItem){
+            return queueItem.destroy();
+          })
+        );
+      }
+      return Parse.Promise.when(promises);
     });
   }
 };

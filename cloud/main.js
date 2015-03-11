@@ -1,4 +1,5 @@
 _ = require('underscore');
+var moment = require('moment');
 
 var Character = require('cloud/models/character.js');
 var Player = require('cloud/models/player.js');
@@ -215,6 +216,16 @@ Parse.Cloud.define("endMatch", function(request, response) {
   )
 });
 
+// Resets the current match and the entire queue
+// Returns nothing
+Parse.Cloud.define("goodnight", function(request, response) {
+  Parse.Cloud.useMasterKey();
+  SessionData.goodnight().then(function(match, queueItems){
+    response.success("Goodnight :)");
+  });
+});
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -231,4 +242,33 @@ Parse.Cloud.beforeSave("Person", function(request, response) {
     person.set('rank', Elo.startRank);
     response.success();
   }
+});
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////                        CLOUD JOB                       ////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+Parse.Cloud.job("cleanupMatch", function(request, response) {
+  Parse.Cloud.useMasterKey();
+  Match.currentMatch().then(function(match){
+    if (!match) return null;
+    var now = new moment();
+    var then = new moment(match.createdAt);
+    if (now.diff(then, 'minutes') > 20){
+        return SessionData.goodnight();
+    } else {
+        return null;
+    }
+  }).then(function(match){
+    if (match) {
+      response.success("Game was ended")
+    } else {
+      response.success("No game was ended")
+    }
+  })
 });

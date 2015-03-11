@@ -6,6 +6,12 @@ var Match = Parse.Object.extend("Match", {
   isCurrent: function(){
     return this.get('endedAt') == null;
   },
+  forfeit: function(){
+    return this.save({
+      winner: 'none',
+      endedAt: new Date()
+    });
+  },
   endMatch: function(winner){
     return this.save({
       winner: winner,
