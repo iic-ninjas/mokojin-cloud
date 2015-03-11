@@ -117,7 +117,7 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
       } else {
         queueItem.dequeue().done(
           function(player){
-            return Notifications.notifySessionDataChanged().done(function() {
+            return Notifications.notifySessionDataChanged().then(function() {
               response.success();
             });
           }
