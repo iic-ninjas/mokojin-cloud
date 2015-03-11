@@ -1,5 +1,5 @@
 _ = require('underscore');
-var Notifications = require('cloud/notifications.js');
+var moment = require('moment');
 
 var Character = require('cloud/models/character.js');
 var Player = require('cloud/models/player.js');
@@ -9,6 +9,7 @@ var Person = require('cloud/models/person.js');
 
 var Elo = require('cloud/elo.js');
 var SessionData = require('cloud/session_data.js');
+var Notifications = require('cloud/notifications.js');
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -226,6 +227,18 @@ Parse.Cloud.define("endMatch", function(request, response) {
   )
 });
 
+// Resets the current match and the entire queue
+// Returns nothing
+Parse.Cloud.define("goodnight", function(request, response) {
+  Parse.Cloud.useMasterKey();
+  SessionData.goodnight().then(function(match, queueItems){
+    Notifications.notifySessionDataChanged().then(function(){
+      response.success("Goodnight :)");
+    })
+  });
+});
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -244,3 +257,32 @@ Parse.Cloud.beforeSave("Person", function(request, response) {
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////                        CLOUD JOB                       ////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+Parse.Cloud.job("cleanupMatch", function(request, response) {
+  Parse.Cloud.useMasterKey();
+  Match.currentMatch().then(function(match){
+    if (!match) return null;
+    var now = new moment();
+    var then = new moment(match.createdAt);
+    if (now.diff(then, 'minutes') > 20){
+        return SessionData.goodnight();
+    } else {
+        return null;
+    }
+  }).then(function(match){
+    if (match) {
+      Notifications.notifySessionDataChanged().then(function(){
+        response.success("Game was ended")
+      })
+    } else {
+      response.success("No game was ended")
+    }
+  })
+});
