@@ -9,6 +9,7 @@ var Person = require('cloud/models/person.js');
 
 var Elo = require('cloud/elo.js');
 var SessionData = require('cloud/session_data.js');
+var Notifications = require('cloud/notifications.js');
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +84,9 @@ Parse.Cloud.define("joinQueue", function(request, response) {
                   }
                 }
               ).then( function(){
-                response.success(player);
+                Notifications.notifySessionDataChanged().then(function() {
+                  response.success(player);
+                });
               });
             } else {
               response.error('No player :(');
@@ -115,7 +118,9 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
       } else {
         queueItem.dequeue().done(
           function(player){
-            response.success();
+            return Notifications.notifySessionDataChanged().then(function() {
+              response.success();
+            });
           }
         ).fail(
           function(err){
@@ -154,7 +159,11 @@ Parse.Cloud.define("setCharacter", function(request, response) {
       player.set("characterB", charB);
       return player.save();
     }
-  ).done(
+  ).then(function(player) {
+    return Notifications.notifySessionDataChanged().then(function() {
+      return player;
+    });
+  }).done(
     function(player){
       response.success(player);
     }
@@ -205,7 +214,9 @@ Parse.Cloud.define("endMatch", function(request, response) {
         Match.startMatch(winner).then(
           function(newMatch){
             if (newMatch){
-              response.success(newMatch);
+              Notifications.notifySessionDataChanged().then(function() {
+                response.success(newMatch);
+              });
             } else {
               response.error();
             }
@@ -221,7 +232,9 @@ Parse.Cloud.define("endMatch", function(request, response) {
 Parse.Cloud.define("goodnight", function(request, response) {
   Parse.Cloud.useMasterKey();
   SessionData.goodnight().then(function(match, queueItems){
-    response.success("Goodnight :)");
+    Notifications.notifySessionDataChanged().then(function(){
+      response.success("Goodnight :)");
+    })
   });
 });
 
@@ -244,7 +257,6 @@ Parse.Cloud.beforeSave("Person", function(request, response) {
   }
 });
 
-
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -266,7 +278,9 @@ Parse.Cloud.job("cleanupMatch", function(request, response) {
     }
   }).then(function(match){
     if (match) {
-      response.success("Game was ended")
+      Notifications.notifySessionDataChanged().then(function(){
+        response.success("Game was ended")
+      })
     } else {
       response.success("No game was ended")
     }
