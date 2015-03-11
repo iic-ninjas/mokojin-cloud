@@ -21,7 +21,7 @@ var SessionData = {
         promises.push(sessionData.match.forfeit());
       }
       if (sessionData.queue){
-        promises.concat(
+        promises = promises.concat(
           _.map(sessionData.queue, function(queueItem){
             return queueItem.destroy();
           })
