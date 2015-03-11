@@ -1,5 +1,5 @@
 _ = require('underscore');
-notifications = require('cloud/notifications.js');
+Notifications = require('cloud/notifications.js');
 
 var Character = Parse.Object.extend("Character", {
 
@@ -239,10 +239,8 @@ Parse.Cloud.define("joinQueue", function(request, response) {
                   }
                 }
               ).then( function(){
-                notifications.sendDataChangedNotification().then(function() {
+                Notifications.notifySessionDataChanged().then(function() {
                   response.success(player);
-                }).fail(function(err) {
-                  response.success(err);
                 });
               });
             } else {
@@ -275,7 +273,7 @@ Parse.Cloud.define("leaveQueue", function(request, response) {
       } else {
         queueItem.dequeue().done(
           function(player){
-            return notifications.sendDataChangedNotification().done(function() {
+            return Notifications.notifySessionDataChanged().done(function() {
               response.success();
             });
           }
@@ -317,7 +315,7 @@ Parse.Cloud.define("setCharacter", function(request, response) {
       return player.save();
     }
   ).then(function(player) {
-    return notifications.sendDataChangedNotification().done(function() {
+    return Notifications.notifySessionDataChanged().then(function() {
       return player;
     });
   }).done(
@@ -365,10 +363,8 @@ Parse.Cloud.define("endMatch", function(request, response) {
         Match.startMatch(winner).then(
           function(newMatch){
             if (newMatch){
-              notifications.sendDataChangedNotification().done(function() {
+              Notifications.notifySessionDataChanged().then(function() {
                 response.success(newMatch);
-              }).fail(function(err) {
-                response.success(err);
               });
             } else {
               response.error();
