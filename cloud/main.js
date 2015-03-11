@@ -67,39 +67,26 @@ Parse.Cloud.define("joinQueue", function(request, response) {
     response.error("person (id) is required");
     return;
   }
-  Person.find(personId).then(
-    function(person){
-      if (!person){
-        response.error("No person matching that id")
-      } else {
-        person.joinQueue().done(
-          function(player){
-            if (player){
-              Match.currentMatch().then(
-                function(match){
-                  if (match) {
-                    return null;
-                  } else {
-                    return Match.startMatch()
-                  }
-                }
-              ).then( function(){
-                Notifications.notifySessionDataChanged().then(function() {
-                  response.success(player);
-                });
-              });
-            } else {
-              response.error('No player :(');
-            }
-          }
-        ).fail(
-          function(err){
-            response.error(err);
-          }
-        )
-      }
-    }
-  )
+  Person.find(personId).then(function(person){
+    if (!person) return Parse.Promise.error("No person matching id");
+    return person.joinQueue();
+  }).then(function(player){
+    if (!player) return Parse.Promise.error("No player added");
+    return Match.currentMatch().then(function(match){
+      if (match) return match;
+      return Match.startMatch().fail(function(err){
+        return Parse.Promise.as(player);
+      });
+    }).then(function(match){
+      return player;
+    });
+  }).then(function(player){
+    Notifications.notifySessionDataChanged().then(function(){
+      response.success(player);
+    });
+  }).fail(function(err){
+    response.error(err);
+  });
 });
 
 
