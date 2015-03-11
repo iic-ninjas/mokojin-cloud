@@ -91,23 +91,15 @@ var Match = Parse.Object.extend("Match", {
     return query.get(id);
   },
   findPlayerInCurrentMatch: function(person){
-    var promise = new Parse.Promise();
-    Match.currentMatch().then(
-      function(match){
-        if (!match){
-          promise.resolve(null)
-        } else {
-          if (match.get('playerA').get('person') == person){
-            promise.resolve(match.get('playerA'))
-          } else if (match.get('playerB').get('person') == person){
-            promise.resolve(match.get('playerB'))
-          } else {
-            promise.resolve(null);
-          }
-        }
+    return Match.currentMatch().then(function(match){
+      if (!match) return null;
+      if (match.get('playerA').get('person').id == person.id){
+        return match.get('playerA');
+      } else if (match.get('playerB').get('person').id == person.id){
+        return match.get('playerB');
       }
-    );
-    return promise;
+      return null;
+    });
   }
 });
 module.exports = Match;

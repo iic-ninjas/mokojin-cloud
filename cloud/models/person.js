@@ -9,8 +9,8 @@ var Person = Parse.Object.extend("Person", {
       Match.findPlayerInCurrentMatch(person)
     ]).then(
       function(playerFromQueue, playerFromMatch){
-        if (playerFromQueue) return Parse.Promise.as(playerFromQueue)
-        if (playerFromMatch) return Parse.Promise.as(playerFromMatch)
+        if (playerFromQueue) return playerFromQueue;
+        if (playerFromMatch) return playerFromMatch;
         return Queue.enqueuePerson(person);
       }
     )
