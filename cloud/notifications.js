@@ -1,7 +1,7 @@
 var SESSION_DATA_CHANGED = "sessionDataChanged";
 
 module.exports = {
-  sendDataChangedNotification: function() {
+  notifySessionDataChanged: function() {
 
     var everyoneQuery = new Parse.Query(Parse.Installation);
     return Parse.Push.send({
