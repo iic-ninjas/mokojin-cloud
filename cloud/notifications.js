@@ -17,8 +17,6 @@ module.exports = {
   },
 
   notifyInvitation: function() {
-    var everyoneQuery = new Parse.Query(Parse.Installation);
-
     return Parse.Push.send({
       where: new Parse.Query(Parse.Installation),
       data: {
