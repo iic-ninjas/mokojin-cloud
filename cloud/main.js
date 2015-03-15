@@ -207,7 +207,7 @@ Parse.Cloud.define("endMatch", function(request, response) {
         newPlayer.set("characterB", loser.get('characterB'));
         return newPlayer.save();
       }).then(function(){
-        Match.startMatch(winner).then(
+        Match.startMatch(match).then(
           function(newMatch){
             if (newMatch){
               Notifications.notifySessionDataChanged().then(function() {

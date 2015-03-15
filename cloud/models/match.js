@@ -41,20 +41,22 @@ var Match = Parse.Object.extend("Match", {
     }
   }
 }, {
-  startMatch: function(seededPlayer){
+  startMatch: function(seededMatch){
     return Parse.Promise.when( // Get the first two QueueItems
       [Queue.peek(0), Queue.peek(1)]
     ).then(function(queueItem0, queueItem1){ // Make sure we have 2 players, dequeue the ones that we need from the queue
       if (!queueItem0) return Parse.Promise.error("can't start a match - not enough players")
-      if (!queueItem1 && !seededPlayer) return Parse.Promise.error("can't start a match - not enough players")
+      if (!queueItem1 && !seededMatch) return Parse.Promise.error("can't start a match - not enough players")
       return Parse.Promise.when([
         queueItem0.dequeue(),
-        seededPlayer ? Parse.Promise.as(seededPlayer) : queueItem1.dequeue()
+        seededMatch ? Parse.Promise.as(seededMatch.winner()) : queueItem1.dequeue()
       ]);
     }).then(function(player0, player1){ // Create the new match obj
       var match = new Match();
-      match.set('playerA', player0);
-      match.set('playerB', player1);
+      keyB = seededMatch ? seededMatch.get('winner') : 'playerB';
+      keyA = (keyB == 'playerB') ? 'playerA' : 'playerB';
+      match.set(keyA, player0);
+      match.set(keyB, player1);
       return match.save();
     })
   },
