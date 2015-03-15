@@ -21,7 +21,7 @@ var Notifications = require('cloud/notifications.js');
 
 // Sends a Push Notification inviting all users to play
 Parse.Cloud.define("invitePlayers", function(request, response){
-  Notifications.notifyInvitation().done(function() {
+  Notifications.notifyInvitation(request.params.installationId).done(function() {
     response.success();
   }).fail(function(error) {
     response.error(error);
